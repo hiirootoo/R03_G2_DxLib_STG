@@ -883,9 +883,6 @@ VOID PlayProc(VOID)
 		}
 	}
 
-	//Ç∆ÇËÇ†Ç¶Ç∏ÉXÉRÉAâ¡éZ
-	Score++;
-
 	return;
 }
 
