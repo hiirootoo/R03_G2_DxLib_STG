@@ -132,11 +132,23 @@ CHARACTOR player;
 //背景画像
 IMAGE back[2];	//背景は２つの画像
 
+IMAGE titleback;
+IMAGE endback;
+
 //敵データ（元）
 CHARACTOR teki_moto[TEKI_KIND];
 
 //実際の敵データ
 CHARACTOR teki[TEKI_MAX];
+
+//画像を読み込む
+IMAGE TitleLogo;	//タイトルロゴ
+IMAGE EndClear;		//クリアロゴ
+
+//音楽
+AUDIO TitleBGM;
+AUDIO PlayBGM;
+AUDIO EndBGM;
 
 //敵データのパス
 char tekiPath[TEKI_KIND][255] =
@@ -315,6 +327,16 @@ int WINAPI WinMain(
 	//背景画像解放
 	DeleteGraph(back[0].handle);
 	DeleteGraph(back[1].handle);
+	
+	DeleteGraph(titleback.handle);
+	DeleteGraph(endback.handle);
+
+	DeleteGraph(TitleLogo.handle);		//画像をメモリ上から削除
+	DeleteGraph(EndClear.handle);		//画像をメモリ上から削除
+
+	DeleteSoundMem(TitleBGM.handle);	//音楽をメモリ上から削除
+	DeleteSoundMem(PlayBGM.handle);		//音楽をメモリ上から削除
+	DeleteSoundMem(EndBGM.handle);		//音楽をメモリ上から削除
 
 	//敵の画像を解放
 	for (int i = 0; i < TEKI_KIND; i ++)
@@ -388,6 +410,16 @@ BOOL GameLoad(VOID)
 	back[1].y = 0;
 	back[1].IsDraw = TRUE;	//描画する
 
+	if (LoadImageMem(&titleback, ".\\img\\titleback.png") == FALSE) { return FALSE; }
+	titleback.x = 0;
+	titleback.y = 0;	//画像の高さ分、位置を上に上げる
+	titleback.IsDraw = TRUE;	//描画する
+
+	if (LoadImageMem(&endback, ".\\img\\endback.png") == FALSE) { return FALSE; }
+	endback.x = 0;
+	endback.y = 0;	//画像の高さ分、位置を上に上げる
+	endback.IsDraw = TRUE;	//描画する
+
 	//敵の画像を読み込み
 	for (int i = 0; i < TEKI_KIND; i++)
 	{
@@ -397,6 +429,14 @@ BOOL GameLoad(VOID)
 		CollUpdatePlayer(&teki_moto[i]);	//当たり判定の更新
 		teki_moto[i].img.IsDraw = FALSE;	//描画しません
 	}
+
+	if (!LoadImageMem(&TitleLogo, ".\\img\\タイトルロゴ.png")) { return FALSE; }
+	if (!LoadImageMem(&EndClear, ".\\img\\ゲームクリア.png")) { return FALSE; }
+	
+	//音楽の読み込み
+	if (!LoadAudio(&TitleBGM, ".\\Audio\\TitleBgm.mp3", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+	if (!LoadAudio(&PlayBGM, ".\\Audio\\PlayBgm.mp3", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
+	if (!LoadAudio(&EndBGM, ".\\Audio\\EndBgm.mp3", 255, DX_PLAYTYPE_LOOP)) { return FALSE; }
 
 	return TRUE;	//全て読み込みた！
 }
@@ -554,6 +594,14 @@ VOID GameInit(VOID)
 	back[1].y = 0;
 	back[1].IsDraw = TRUE;	//描画する
 
+	titleback.x = 0;
+	titleback.y = 0;
+	titleback.IsDraw = TRUE;	//描画する
+
+	endback.x = 0;
+	endback.y = 0;
+	endback.IsDraw = TRUE;	//描画する
+
 	//敵の画像を読み込み
 	for (int i = 0; i < TEKI_KIND; i++)
 	{
@@ -563,6 +611,13 @@ VOID GameInit(VOID)
 		teki_moto[i].img.IsDraw = FALSE;	//描画しません
 	}
 
+	//タイトルロゴの位置を決める
+	TitleLogo.x = GAME_WIDTH / 2 - TitleLogo.width / 2;	//中央揃え
+	TitleLogo.y = 100;
+
+	//クリアロゴの位置を決める
+	EndClear.x = GAME_WIDTH / 2 - EndClear.width / 2;	//中央揃え
+	EndClear.y = GAME_HEIGHT / 2 - EndClear.height / 2;	//中央揃え
 }
 
 /// <summary>
@@ -609,7 +664,17 @@ VOID TitleProc(VOID)
 		//マウスを描画しない
 		SetMouseDispFlag(FALSE);
 
+		//BGMを止める
+		StopSoundMem(TitleBGM.handle);
+
 		return;
+	}
+
+	//BGMが流れていないとき
+	if (CheckSoundMem(TitleBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(TitleBGM.handle, TitleBGM.playType);
 	}
 
 	return;
@@ -623,6 +688,13 @@ VOID TitleDraw(VOID)
 	DrawTama(&tama[0]);		//弾を描画
 
 	DrawString(0, 0, "タイトル画面", GetColor(0, 0, 0));
+
+	//描画
+	DrawGraph(titleback.x, titleback.y, titleback.handle, TRUE);
+
+	//タイトルロゴの描画
+	DrawGraph(TitleLogo.x, TitleLogo.y, TitleLogo.handle, TRUE);
+
 	return;
 }
 
@@ -682,6 +754,9 @@ VOID PlayProc(VOID)
 
 		//マウスを描画する
 		SetMouseDispFlag(TRUE);
+
+		//BGMを止める
+		StopSoundMem(PlayBGM.handle);
 
 		return;
 	}
@@ -881,6 +956,13 @@ VOID PlayProc(VOID)
 				}
 			}
 		}
+	}
+
+	//BGMが流れていないとき
+	if (CheckSoundMem(PlayBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(PlayBGM.handle, PlayBGM.playType);
 	}
 
 	return;
@@ -1085,7 +1167,17 @@ VOID EndProc(VOID)
 		//タイトル画面に切り替え
 		ChangeScene(GAME_SCENE_TITLE);
 
+		//BGMを止める
+		StopSoundMem(EndBGM.handle);
+
 		return;
+	}
+
+	//BGMが流れていないとき
+	if (CheckSoundMem(EndBGM.handle) == 0)
+	{
+		//BGMを流す
+		PlaySoundMem(EndBGM.handle, EndBGM.playType);
 	}
 
 	return;
@@ -1097,6 +1189,13 @@ VOID EndProc(VOID)
 VOID EndDraw(VOID)
 {
 	DrawString(0, 0, "エンド画面", GetColor(0, 0, 0));
+
+	//描画
+	DrawGraph(titleback.x, titleback.y, titleback.handle, TRUE);
+
+	//EndClearの描画
+	DrawGraph(EndClear.x, EndClear.y, EndClear.handle, TRUE);
+
 	return;
 }
 
